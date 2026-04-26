@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: corebank
+      POSTGRES_USER: corebank
+      POSTGRES_PASSWORD: corebank
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_URL: jdbc:postgresql://db:5432/corebank
+      POSTGRES_USER: corebank
+      POSTGRES_PASSWORD: corebank
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
