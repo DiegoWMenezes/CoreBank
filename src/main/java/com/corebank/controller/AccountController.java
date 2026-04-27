@@ -2,16 +2,18 @@ package com.corebank.controller;
 
 import com.corebank.dto.AccountDTO;
 import com.corebank.dto.TransactionDTO;
+import com.corebank.dto.TransferDTO;
 import com.corebank.entity.Account;
 import com.corebank.entity.Transaction;
 import com.corebank.service.AccountService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +30,11 @@ public class AccountController {
         this.service = service;
     }
 
+    @GetMapping
+    public ResponseEntity<List<Account>> list() {
+        return ResponseEntity.ok(service.listAccounts());
+    }
+
     @PostMapping
     public ResponseEntity<Account> create(@Valid @RequestBody AccountDTO dto) {
         Account account = service.createAccount(dto);
@@ -37,6 +44,17 @@ public class AccountController {
     @GetMapping("/{id}")
     public ResponseEntity<Account> get(@PathVariable Long id) {
         return ResponseEntity.ok(service.getAccount(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Account> update(@PathVariable Long id, @Valid @RequestBody AccountDTO dto) {
+        return ResponseEntity.ok(service.updateAccount(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.deleteAccount(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/balance")
@@ -53,6 +71,11 @@ public class AccountController {
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<Account> withdraw(@PathVariable Long id, @Valid @RequestBody TransactionDTO dto) {
         return ResponseEntity.ok(service.withdraw(id, dto));
+    }
+
+    @PostMapping("/{id}/transfer")
+    public ResponseEntity<Account> transfer(@PathVariable Long id, @Valid @RequestBody TransferDTO dto) {
+        return ResponseEntity.ok(service.transfer(id, dto));
     }
 
     @GetMapping("/{id}/transactions")

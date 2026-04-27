@@ -2,6 +2,7 @@ package com.corebank.service;
 
 import com.corebank.dto.AccountDTO;
 import com.corebank.dto.TransactionDTO;
+import com.corebank.dto.TransferDTO;
 import com.corebank.entity.Account;
 import com.corebank.entity.Transaction;
 import com.corebank.exception.BusinessException;
@@ -78,6 +79,54 @@ public class AccountService {
 
     public Double getBalance(Long accountId) {
         return getAccount(accountId).getBalance();
+    }
+
+    public List<Account> listAccounts() {
+        return accountRepository.findAll();
+    }
+
+    @Transactional
+    public void deleteAccount(Long id) {
+        Account account = getAccount(id);
+        transactionRepository.deleteByAccountId(id);
+        accountRepository.delete(account);
+    }
+
+    @Transactional
+    public Account updateAccount(Long id, AccountDTO dto) {
+        Account account = getAccount(id);
+        account.setOwnerName(dto.getOwnerName());
+        return accountRepository.save(account);
+    }
+
+    @Transactional
+    public Account transfer(Long fromAccountId, TransferDTO dto) {
+        Account from = getAccount(fromAccountId);
+        Account to = getAccount(dto.getTargetAccountId());
+
+        if (from.getId().equals(to.getId())) {
+            throw new BusinessException("Conta de origem e destino devem ser diferentes");
+        }
+
+        if (dto.getAmount() > from.getBalance()) {
+            throw new BusinessException("Saldo insuficiente para transferencia");
+        }
+
+        AntifraudClient.AntifraudResult fraudCheck = antifraudClient.evaluate(
+                fromAccountId, dto.getAmount(), "TRANSFER");
+        if (!fraudCheck.approved()) {
+            throw new BusinessException("Transferencia rejeitada pelo antifraude: " + fraudCheck.reason());
+        }
+
+        from.setBalance(from.getBalance() - dto.getAmount());
+        to.setBalance(to.getBalance() + dto.getAmount());
+        accountRepository.save(from);
+        accountRepository.save(to);
+
+        transactionRepository.save(new Transaction(fromAccountId, Transaction.Type.TRANSFER, dto.getAmount()));
+        transactionRepository.save(new Transaction(dto.getTargetAccountId(), Transaction.Type.DEPOSIT, dto.getAmount()));
+
+        return from;
     }
 
     public List<Transaction> getTransactions(Long accountId) {

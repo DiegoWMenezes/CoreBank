@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoreBank - Core Banking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; }
+        .card-header { font-weight: 600; }
+        .balance { font-size: 1.4rem; font-weight: 700; color: #198754; }
+        .balance.negative { color: #dc3545; }
+        .modal-body label { font-weight: 500; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/"><i class="bi bi-bank"></i> CoreBank</a>
+        <span class="navbar-text text-light">Core Banking API</span>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h4><i class="bi bi-people"></i> Contas</h4>
+            <button class="btn btn-primary" onclick="openCreateModal()"><i class="bi bi-plus-circle"></i> Nova Conta</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white"><i class="bi bi-list-ul"></i> Todas as Contas</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>ID</th><th>Titular</th><th>Saldo</th><th>Acoes</th></tr>
+                        </thead>
+                        <tbody id="accountsTable"></tbody>
+                    </table>
+                    <div id="emptyState" class="text-center py-4 text-muted d-none">Nenhuma conta cadastrada</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4" id="detailPanel" style="display:none">
+            <div class="card">
+                <div class="card-header bg-white"><i class="bi bi-info-circle"></i> Detalhes da Conta</div>
+                <div class="card-body">
+                    <p><strong>ID:</strong> <span id="detId"></span></p>
+                    <p><strong>Titular:</strong> <span id="detName"></span></p>
+                    <p><strong>Saldo:</strong> <span id="detBalance" class="balance"></span></p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-sm" onclick="openDepositModal()"><i class="bi bi-arrow-down-circle"></i> Deposito</button>
+                        <button class="btn btn-warning btn-sm" onclick="openWithdrawModal()"><i class="bi bi-arrow-up-circle"></i> Saque</button>
+                        <button class="btn btn-info btn-sm text-white" onclick="openTransferModal()"><i class="bi bi-arrow-left-right"></i> Transferencia</button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="openEditModal()"><i class="bi bi-pencil"></i> Editar</button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteAccount()"><i class="bi bi-trash"></i> Excluir</button>
+                    </div>
+                    <hr>
+                    <h6><i class="bi bi-clock-history"></i> Transacoes</h6>
+                    <div id="transactionsList" class="small"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Account Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Nova Conta</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label class="form-label">Nome do Titular</label>
+                <input type="text" id="createName" class="form-control" placeholder="Ex: Joao Silva">
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" onclick="createAccount()">Criar</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Account Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Editar Conta</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label class="form-label">Nome do Titular</label>
+                <input type="text" id="editName" class="form-control">
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" onclick="updateAccount()">Salvar</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Deposit Modal -->
+<div class="modal fade" id="depositModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Deposito</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p>Conta: <strong id="depositAcc"></strong></p>
+                <label class="form-label">Valor</label>
+                <input type="number" id="depositAmount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" onclick="doDeposit()">Depositar</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal fade" id="withdrawModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Saque</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p>Conta: <strong id="withdrawAcc"></strong> | Saldo: <strong id="withdrawBal"></strong></p>
+                <label class="form-label">Valor</label>
+                <input type="number" id="withdrawAmount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning" onclick="doWithdraw()">Sacar</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Transferencia</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p>Origem: <strong id="transferFrom"></strong> | Saldo: <strong id="transferBal"></strong></p>
+                <label class="form-label">Conta Destino (ID)</label>
+                <input type="number" id="transferTarget" class="form-control" min="1" placeholder="ID da conta destino">
+                <label class="form-label mt-2">Valor</label>
+                <input type="number" id="transferAmount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-info text-white" onclick="doTransfer()">Transferir</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert">
+        <div class="toast-header"><strong class="me-auto" id="toastTitle">CoreBank</strong><button type="button" class="btn-close" data-bs-dismiss="toast"></button></div>
+        <div class="toast-body" id="toastBody"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = '/accounts';
+let selectedId = null;
+
+async function api(url, opts = {}) {
+    const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        ...opts
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(err.error || err.message || 'Erro na requisicao');
+    }
+    if (res.status === 204) return null;
+    return res.json();
+}
+
+function fmt(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.className = 'toast text-bg-' + type;
+    document.getElementById('toastBody').textContent = msg;
+    bootstrap.Toast.getOrCreateInstance(t).show();
+}
+
+async function loadAccounts() {
+    const accounts = await api(API);
+    const tbody = document.getElementById('accountsTable');
+    const empty = document.getElementById('emptyState');
+    if (accounts.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+    tbody.innerHTML = accounts.map(a => `
+        <tr class="${a.id === selectedId ? 'table-active' : ''}" onclick="selectAccount(${a.id})" style="cursor:pointer">
+            <td>${a.id}</td>
+            <td>${a.ownerName}</td>
+            <td><span class="balance ${a.balance < 0 ? 'negative' : ''}">${fmt(a.balance)}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation();quickDeposit(${a.id})"><i class="bi bi-plus"></i></button>
+                <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation();quickWithdraw(${a.id})"><i class="bi bi-dash"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();confirmDelete(${a.id},'${a.ownerName}')"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function selectAccount(id) {
+    selectedId = id;
+    const acc = await api(API + '/' + id);
+    document.getElementById('detId').textContent = acc.id;
+    document.getElementById('detName').textContent = acc.ownerName;
+    const bal = document.getElementById('detBalance');
+    bal.textContent = fmt(acc.balance);
+    bal.className = 'balance' + (acc.balance < 0 ? ' negative' : '');
+    document.getElementById('detailPanel').style.display = '';
+    loadTransactions(id);
+    loadAccounts();
+}
+
+async function loadTransactions(id) {
+    const txs = await api(API + '/' + id + '/transactions');
+    const div = document.getElementById('transactionsList');
+    if (txs.length === 0) { div.innerHTML = '<p class="text-muted">Nenhuma transacao</p>'; return; }
+    div.innerHTML = txs.map(t => {
+        const icon = t.type === 'DEPOSIT' ? 'arrow-down-circle text-success' : t.type === 'WITHDRAWAL' ? 'arrow-up-circle text-warning' : 'arrow-left-right text-info';
+        const sign = t.type === 'DEPOSIT' ? '+' : '-';
+        return `<div class="d-flex justify-content-between py-1 border-bottom"><span><i class="bi bi-${icon}"></i> ${t.type}</span><span>${sign}${fmt(t.amount)}</span><small class="text-muted">${new Date(t.createdAt).toLocaleString('pt-BR')}</small></div>`;
+    }).join('');
+}
+
+function openCreateModal() { document.getElementById('createName').value = ''; new bootstrap.Modal(document.getElementById('createModal')).show(); }
+function openEditModal() { document.getElementById('editName').value = document.getElementById('detName').textContent; new bootstrap.Modal(document.getElementById('editModal')).show(); }
+function openDepositModal() {
+    document.getElementById('depositAcc').textContent = selectedId;
+    document.getElementById('depositAmount').value = '';
+    new bootstrap.Modal(document.getElementById('depositModal')).show();
+}
+function openWithdrawModal() {
+    document.getElementById('withdrawAcc').textContent = selectedId;
+    document.getElementById('withdrawBal').textContent = document.getElementById('detBalance').textContent;
+    document.getElementById('withdrawAmount').value = '';
+    new bootstrap.Modal(document.getElementById('withdrawModal')).show();
+}
+function openTransferModal() {
+    document.getElementById('transferFrom').textContent = selectedId;
+    document.getElementById('transferBal').textContent = document.getElementById('detBalance').textContent;
+    document.getElementById('transferTarget').value = '';
+    document.getElementById('transferAmount').value = '';
+    new bootstrap.Modal(document.getElementById('transferModal')).show();
+}
+
+async function createAccount() {
+    const name = document.getElementById('createName').value.trim();
+    if (!name) { showToast('Nome e obrigatorio', 'danger'); return; }
+    await api(API, { method: 'POST', body: JSON.stringify({ ownerName: name }) });
+    bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+    showToast('Conta criada com sucesso');
+    loadAccounts();
+}
+
+async function updateAccount() {
+    const name = document.getElementById('editName').value.trim();
+    if (!name) { showToast('Nome e obrigatorio', 'danger'); return; }
+    await api(API + '/' + selectedId, { method: 'PUT', body: JSON.stringify({ ownerName: name }) });
+    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    showToast('Conta atualizada');
+    selectAccount(selectedId);
+    loadAccounts();
+}
+
+function confirmDelete(id, name) {
+    if (confirm('Excluir a conta de ' + name + '?')) deleteAccountById(id);
+}
+async function deleteAccount() {
+    if (!confirm('Excluir esta conta e todas as transacoes?')) return;
+    await deleteAccountById(selectedId);
+}
+async function deleteAccountById(id) {
+    await api(API + '/' + id, { method: 'DELETE' });
+    if (selectedId === id) { selectedId = null; document.getElementById('detailPanel').style.display = 'none'; }
+    showToast('Conta excluida');
+    loadAccounts();
+}
+
+async function doDeposit() {
+    const amount = parseFloat(document.getElementById('depositAmount').value);
+    if (!amount || amount <= 0) { showToast('Valor invalido', 'danger'); return; }
+    await api(API + '/' + selectedId + '/deposit', { method: 'POST', body: JSON.stringify({ amount }) });
+    bootstrap.Modal.getInstance(document.getElementById('depositModal')).hide();
+    showToast('Deposito realizado');
+    selectAccount(selectedId);
+}
+
+async function doWithdraw() {
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    if (!amount || amount <= 0) { showToast('Valor invalido', 'danger'); return; }
+    try {
+        await api(API + '/' + selectedId + '/withdraw', { method: 'POST', body: JSON.stringify({ amount }) });
+        bootstrap.Modal.getInstance(document.getElementById('withdrawModal')).hide();
+        showToast('Saque realizado');
+        selectAccount(selectedId);
+    } catch (e) { showToast(e.message, 'danger'); }
+}
+
+async function doTransfer() {
+    const target = parseInt(document.getElementById('transferTarget').value);
+    const amount = parseFloat(document.getElementById('transferAmount').value);
+    if (!target) { showToast('Conta destino invalida', 'danger'); return; }
+    if (!amount || amount <= 0) { showToast('Valor invalido', 'danger'); return; }
+    try {
+        await api(API + '/' + selectedId + '/transfer', { method: 'POST', body: JSON.stringify({ targetAccountId: target, amount }) });
+        bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+        showToast('Transferencia realizada');
+        selectAccount(selectedId);
+    } catch (e) { showToast(e.message, 'danger'); }
+}
+
+function quickDeposit(id) { selectedId = id; openDepositModal(); }
+function quickWithdraw(id) { selectedId = id; openWithdrawModal(); }
+
+loadAccounts();
+</script>
+</body>
+</html>
